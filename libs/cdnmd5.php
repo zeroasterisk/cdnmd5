@@ -202,6 +202,10 @@ Class Cdnmd5 {
 	 * @return string $filepath (webroot relative path)
 	 */
 	public static function cleanWWW($filepath) {
+		// quick exit, if filename only, no path
+		if (strpos($filepath, '/') === false) {
+			return $filepath;
+		}
 		if (strpos($filepath, APP) !== false) {
 			// replace any FULL path with a /
 			$filepath = str_replace(WWW_ROOT, '/', $filepath);
@@ -214,12 +218,12 @@ Class Cdnmd5 {
 			// replace any FULL path with a /
 			$filepath = str_replace($BASE, '/', $filepath);
 		}
-		if (strpos($filepath, '/webroot/') !== false) {
+		if (strpos($filepath, 'webroot/') !== false) {
 			// we only care about any part of the path after webroot
-			$parts = explode('/webroot/', $filepath);
+			$parts = explode('webroot/', $filepath);
 			$filepath = array_pop($parts);
 		}
-		return $filepath;
+		return '/' . trim($filepath, '/');
 	}
 
 	/**

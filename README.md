@@ -42,6 +42,27 @@ OR
 If that md5hash doesn't exist for some reason (or is empty) we try to just
 load the "real" file from the local repository.
 
+Limitations:
+---------------
+
+**Filenames must be unique**, all path data is stripped when determining the
+md5hash for a file and when transfering files to the CDN.  This means if you
+have 'webroot/css/main.css' and 'webroot/plugin/main.css' that they will walk
+on top of each other and you'll never get what you want.
+
+I highly recommend you aggregate your assets into one or two files per type,
+before you consider the **cdnmd5** processing.
+
+Suggestions
+
+* https://github.com/markstory/asset_compress (cakephp toolkit for all assets)
+* https://developers.google.com/closure/ (slow, java, but best compression and good parser warnings)
+* https://github.com/mishoo/UglifyJS2 (fast JS aggregation/minification)
+
+Note: This library only works with one CDN at a time (for now).
+
+
+
 Requirements:
 -------------------
 
