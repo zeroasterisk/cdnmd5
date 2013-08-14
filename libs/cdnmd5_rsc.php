@@ -49,7 +49,7 @@ Class Cdnmd5Rsc {
 	public static function &getInstance($config = array()) {
 		static $instance = array();
 		if (!$instance) {
-			$instance[0] =& new Cdnmd5Rsc();
+			$instance[0] = new Cdnmd5Rsc();
 		}
 		if (empty($config)) {
 			// nothing
@@ -212,6 +212,10 @@ Class Cdnmd5Rsc {
 	 */
 	private function sendFile($container, $sourcefile, $target_filename) {
 		$o = $container->DataObject();
+		/*if (strpos($sourcefile, 'css')!==false) {
+			$content = file_get_contents($sourcefile);
+			debug(compact('sourcefile', 'content', 'target_filename'));
+		}*/
 		$o->Create(array(
 			'name' => $target_filename,
 		), $sourcefile);
@@ -269,7 +273,7 @@ Class Cdnmd5Rsc {
 			}
 			if ($o->Delete()) {
 				$files[] = $o->name;
-				$this->log[] = "purged file " . $o->name;
+				$_this->log[] = "purged file " . $o->name;
 			}
 		}
 		return count($files);

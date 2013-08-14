@@ -28,6 +28,15 @@
  *   If that md5hash doesn't exist for some reason (or is empty) we try to just
  *     load the "real" file from the local repository.
  *
+ * CSS files have a special "translation" step
+ *
+ * Since they can contain URLs to other files (images)
+ * those URLs are gathered and translated independantly, a copy of the CSS file
+ * is created, and it's transfered...  this allows CSS files to be moved to the
+ * CDN and all linked images, etc are also transfered along with it, in one
+ * simple step, all transfered files are MD5 hashed as well.
+ *
+ *
  * Installation:
  *
  *
@@ -115,7 +124,7 @@ Class Cdnmd5 {
 	public static function &getInstance($config = array()) {
 		static $instance = array();
 		if (!$instance) {
-			$instance[0] =& new Cdnmd5();
+			$instance[0] = new Cdnmd5();
 		}
 		$instance[0]->_setConfig($config);
 		return $instance[0];
@@ -169,6 +178,102 @@ Class Cdnmd5 {
 	}
 
 	/**
+	 * We support webroot relative paths & simple filenames
+	 *
+	 * @param string $filepath (FULL path or webroot relative path)
+	 * @return string $filepath (webroot relative path)
+	 */
+	public function cleanPath($filepath) {
+		return $this->cleanWWW($filepath);
+	}
+
+	/**
+	 * Given any WWW path, this will verify the file exists
+	 * and return the full path
+	 *
+	 * @param string $filepath (FULL path or webroot relative path)
+	 * @return string $filepath (FULL path)
+	 */
+	public function getFullPath($filepath) {
+		if (is_file($filepath) && file_exists($filepath)) {
+			return $filepath;
+		}
+		$_this = Cdnmd5::getInstance();
+		$filepath = $_this->cleanWWW($filepath);
+		$paths = array(
+			WWW_ROOT . trim($filepath , DS),
+			APP . trim($filepath , DS),
+			APP . 'Config' . DS . trim($filepath , DS),
+			APP . 'tmp' . DS . trim($filepath , DS),
+		);
+		foreach ($paths as $path) {
+			$init = $path;
+			$path = $_this->resolvePath($path);
+			if (is_file($path) && file_exists($path)) {
+				unset($paths, $filepath);
+				return $path;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Translate a relative/recursive URL path like 'css/../img' into 'img'
+	 *
+	 * @param string $path
+	 * @return string $path
+	 */
+	public function resolvePath($path) {
+		$path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
+		$parts = array_filter(explode(DIRECTORY_SEPARATOR, $path), 'strlen');
+		$absolutes = array();
+		foreach ($parts as $part) {
+			if ('.'  == $part) {
+				continue;
+			} elseif ('..' == $part) {
+				array_pop($absolutes);
+			} else {
+				$absolutes[] = $part;
+			}
+		}
+		$path = implode(DIRECTORY_SEPARATOR, $absolutes);
+		if (empty($path)) {
+			debug(compact('path', 'init', 'absolutes'));
+			throw OutOfBoundsException('Cdnmd5::resolvePath() returned empty');
+		}
+		return DIRECTORY_SEPARATOR . $path;
+	}
+
+	/**
+	 * Sometimes we want to know the full details of the filepath but treat is
+	 * as a single filename (eg: when writing out a md5 hash version/config file)
+	 *
+	 * @param string $filepath (FULL path or webroot relative path)
+	 * @return string $filename (cleaned)
+	 */
+	public function cleanPathToFilename($filepath) {
+		$filepath = $this->cleanWWW($filepath);
+		$filepath = $this->cleanWWWtoFullTranslation($filepath);
+		$filepath = str_replace(array('/', '\\'), '_', trim($filepath, '/\\'));
+		return $this->cleanFilename($filepath);
+	}
+
+	/**
+	 * sometimes (due to symlinks/plugins/etc) a WWW path might not be
+	 * a full path...  as such, put the WWW path part on the left and
+	 * the full path translation on thr right
+	 */
+	public static function cleanWWWtoFullTranslation($filepath) {
+		$_this = Cdnmd5::getInstance();
+		if (empty($_this->config['Config']['pathTranslations'])) {
+			return $filepath;
+		}
+		$translations = $_this->config['Config']['pathTranslations'];
+		return str_replace(array_keys($translations), array_values($translations), $filepath);
+	}
+
+
+	/**
 	 * We don't funk funky characters...
 	 * also we don't want paths, only basenames
 	 *
@@ -209,6 +314,21 @@ Class Cdnmd5 {
 		if (strpos($filepath, APP) !== false) {
 			// replace any FULL path with a /
 			$filepath = str_replace(WWW_ROOT, '/', $filepath);
+			$filepath = str_replace(array(
+				APP . 'tmp' . DS,
+				APP . 'Plugin' . DS,
+				APP . 'plugins' . DS,
+				APP . 'config' . DS,
+				APP . 'Config' . DS,
+				APP . 'Controller' . DS,
+				APP . 'controllers' . DS,
+				APP . 'Model' . DS,
+				APP . 'models' . DS,
+				APP . 'View' . DS,
+				APP . 'views' . DS,
+			), '/', $filepath);
+			// finally, replace the APP part of the path...
+			// just in case it's still there
 			$filepath = str_replace(APP, '/', $filepath);
 		}
 		// doublecheck because of craziness on __FILE__ pathing
@@ -247,7 +367,8 @@ Class Cdnmd5 {
 	 */
 	public static function getConfigFile($filepath) {
 		$_this = Cdnmd5::getInstance();
-		return $_this->config['Config']['path'] . $_this->cleanFilename($filepath) . '.md5';
+		$filepath = $_this->cleanWWW($filepath);
+		return $_this->config['Config']['path'] . $_this->cleanPathToFilename($filepath) . '.md5';
 	}
 
 	/**
@@ -257,6 +378,7 @@ Class Cdnmd5 {
 	 * @return string $md5hash
 	 */
 	public static function makeHash($filepath) {
+		$filepath = Cdnmd5::getFullPath($filepath);
 		if (!is_file($filepath)) {
 			throw new OutOfBoundsException('Cdnmd5::makeHash - not a valid file');
 		}
@@ -287,6 +409,7 @@ Class Cdnmd5 {
 	 */
 	public static function getHash($filepath) {
 		$_this = Cdnmd5::getInstance();
+		$filepath = Cdnmd5::getFullPath($filepath);
 		$config_file = $_this->getConfigFile($filepath);
 		if (!is_file($config_file)) {
 			return false;
@@ -306,8 +429,9 @@ Class Cdnmd5 {
 		if (empty($md5hash)) {
 			return false;
 		}
-		$filename = $_this->cleanFilename($filepath);
-		extract($_this->splitFilename($filename));
+		$filepath = $_this->cleanPath($filepath);
+		$filepath = trim($filepath, '/');
+		extract($_this->splitFilename($filepath));
 		// ^ sets filenamebase & ext
 		return "{$filenamebase}_{$md5hash}.{$ext}";
 	}
@@ -357,25 +481,36 @@ Class Cdnmd5 {
 		if (empty($cdnfilename)) {
 			return $_this->cleanWWW($filepath);
 		}
+		if ($protocol === false) {
+			return $cdnfilename;
+		}
 		if (empty($protocol) || empty($_this->config['CDN'][$protocol])) {
 			$protocol = 'http';
 			if ($_this->config['Presentation']['alwaysUseHttps'] || $_this->isHttps()) {
 				$protocol = 'https';
 			}
 		}
-		$start = $_this->config['CDN'][$protocol];
+		$start = trim($_this->config['CDN'][$protocol], '/');
+		$cdnfilename = trim($cdnfilename, '/');
 		return "{$start}/{$cdnfilename}";
 	}
 
 	/**
-	 * Convienence shortcut to make a hash for a filepath and transfer it -> CDN
+	 * Convienence shortcut to
+	 * 1) make a hash for a filepath
+	 * 2) and transfer it -> CDN
+	 * 2.1) translate nested URLs (for CSS files) before transfer
 	 *
 	 * @param string $filepath
 	 * @param array $config (optionally pass in config to reset)
-	 * @return bool
+	 * @return boolean
 	 */
 	public static function process($filepath, $config = array()) {
 		$_this = Cdnmd5::getInstance($config);
+		$filepath = $_this->getFullPath($filepath);
+		if (empty($filepath)) {
+			return false;
+		}
 		$_this->makeHash($filepath);
 		return $_this->transfer($filepath);
 	}
@@ -386,9 +521,10 @@ Class Cdnmd5 {
 	 *
 	 * @param string $filepath
 	 * @param array $config (optionally pass in config to reset)
-	 * @return bool
+	 * @return boolean
 	 */
 	public static function transfer($filepath, $config = array()) {
+		$filepath = Cdnmd5::getFullPath($filepath);
 		if (!is_file($filepath)) {
 			throw new OutOfBoundsException('Cdnmd5::transfer - not a valid file');
 		}
@@ -403,6 +539,9 @@ Class Cdnmd5 {
 			debug(compact('filepath', 'cdnfilename'));
 			throw new OutOfBoundsException('Cdnmd5::transfer - unable to setup cdn filename');
 		}
+		// do we need to translate the file to an alternate filepath?
+		$filepath = $_this->makeTranslation($filepath);
+		// transfer the file
 		if ($_this->config['CDN']['type'] == 'RSC') {
 			require_once(dirname(__file__) . '/cdnmd5_rsc.php');
 			return Cdnmd5Rsc::transfer($filepath, $cdnfilename, $_this->config);
@@ -452,6 +591,98 @@ Class Cdnmd5 {
 			throw new OutOfBoundsException('Cdnmd5::purge - sorry, we have not built S3 support yet :(');
 		}
 		throw new OutOfBoundsException('Cdnmd5::purge - unknown CDN type');
+	}
+
+	/**
+	 * CSS files can contain URLs to other files which all need to live
+	 * (at the proper URL/path) on the CDN.
+	 *
+	 * This means that we need to:
+	 * 1) extract the URLs from the CSS file content
+	 * 2) upload each of them to CDNMD5 URLs of their own
+	 * 3) replace the values for each of them
+	 * 4) save the "translated" CSS file to an alternate path
+	 * 5) transfer the "translated" CSS file, instead of the orig.
+	 *
+	 * This should all happen before "normal" processing.
+	 */
+	public static function makeTranslation($filepath) {
+		$_this = Cdnmd5::getInstance();
+		$filepath = $_this->getFullPath($filepath);
+		extract($_this->splitFilename($filepath));
+		if ($ext != 'css') {
+			return $filepath;
+		}
+		$init_content = $content = file_get_contents($filepath);
+		$urls = $_this->parseUrlsFromCSS($content);
+		$basedir = dirname($_this->cleanWWW($filepath));
+		foreach ($urls as $url) {
+			// translate url to "WWW path"
+			$new = $_this->cssFilepathNormalize($url, $basedir);
+			// verify that the file exists and get it's full path
+			$full = $_this->getFullPath($new);
+			if (empty($full)) {
+				// unable to find file to transfer (bad CSS?)
+				continue;
+			}
+			// Cdnmd5 process each of these files
+			if (!$_this->process($full)) {
+				// unable to transfer file (report?)
+				continue;
+			}
+			$newUrl = $_this->url($full, false);
+			if (empty($newUrl)) {
+				// unable to find url of file...
+				continue;
+			}
+			// replace old-->newUrl in content
+			$newUrl = '/' . $newUrl;
+			if ($newUrl != $url) {
+				$content = str_replace($url, $newUrl, $content);
+			}
+		}
+		// did we actually do anything?
+		if ($init_content == $content) {
+			// nope, just return the initial filepath
+			return $filepath;
+		}
+		// make a new copy of this file
+		$filenamebase .= '_translated';
+		$new = "{$filenamebase}.{$ext}";
+		file_put_contents($new, $content);
+		return $new;
+	}
+
+	/**
+	 * Given a big string of CSS, extract the image URLs from it
+	 *
+	 * @param string $content of a css file
+	 * @return array $urls of images from that CSS file
+	 */
+	public static function parseUrlsFromCSS($content) {
+		if (!is_string($content) || empty($content)) {
+			return array();
+		}
+		preg_match_all('~\bbackground(-image)?\s*:(.*?)\(\s*(\'|")?(?<image>.*?)\3?\s*\)~i', $content, $matches);
+		if (empty($matches['image'])) {
+			return array();
+		}
+		$urls = $matches['image'];
+		return array_values(array_unique($urls));
+	}
+
+	/**
+	 * A URL from a CSS file can be absolute (webroot)
+	 * or it can be relative to the CSS file (basedir)
+	 *
+	 */
+	public static function cssFilepathNormalize($url, $basedir) {
+		if (substr($url, 0, 1) == '/') {
+			// absolute... should be fine... continue
+			return $url;
+		}
+		// relative url, relative to this CSS file (in $basedir)
+		return $basedir . '/' . $url;
 	}
 }
 
