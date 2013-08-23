@@ -200,8 +200,9 @@ Class Cdnmd5 {
 		}
 		$_this = Cdnmd5::getInstance();
 		$filepath = $_this->cleanWWW($filepath);
+		$default = WWW_ROOT . trim($filepath , DS);
 		$paths = array(
-			WWW_ROOT . trim($filepath , DS),
+			$default,
 			APP . trim($filepath , DS),
 			APP . 'Config' . DS . trim($filepath , DS),
 			APP . 'tmp' . DS . trim($filepath , DS),
@@ -214,7 +215,7 @@ Class Cdnmd5 {
 				return $path;
 			}
 		}
-		return false;
+		return $default;
 	}
 
 	/**
@@ -291,10 +292,10 @@ Class Cdnmd5 {
 		extract(Cdnmd5::splitFilename($filename));
 		// verify ext & filenamebase
 		if (empty($ext)) {
-			throw new OutOfBoundsException('Cdnmd5::getCdnfilename - empty file extension');
+			throw new OutOfBoundsException('Cdnmd5::cleanFilename - empty file extension');
 		}
 		if (empty($filenamebase)) {
-			throw new OutOfBoundsException('Cdnmd5::getCdnfilename - empty file filenamebase');
+			throw new OutOfBoundsException('Cdnmd5::cleanFilename - empty file filenamebase');
 		}
 		return "{$filenamebase}.{$ext}";
 	}
