@@ -84,16 +84,19 @@ class Cdnmd5Test extends CakeTestCase {
 	public function endTest() {
 		@unlink($this->testfile_js);
 		@unlink($this->testfile_css);
-		/*
 		@unlink($this->testfile_img);
 		@unlink(str_replace('.png', '-a.png', $this->testfile_img));
 		@unlink(str_replace('.png', '-b.png', $this->testfile_img));
 		@unlink(str_replace('.png', '-c.png', $this->testfile_img));
 		@unlink(str_replace('.png', '-relative.png', $this->testfile_img));
-		 */
 		@unlink(Cdnmd5::getConfigFile($this->testfile_js));
 		@unlink(Cdnmd5::getConfigFile($this->testfile_css));
-		@unlink(Cdnmd5::getConfigFile($this->testfile_img));
+		$imgconfig = Cdnmd5::getConfigFile($this->testfile_img);
+		@unlink($imgconfig);
+		@unlink(str_replace('.png', '-a.png', $imgconfig));
+		@unlink(str_replace('.png', '-b.png', $imgconfig));
+		@unlink(str_replace('.png', '-c.png', $imgconfig));
+		@unlink(str_replace('.png', '-relative.png', $imgconfig));
 		$_this = Cdnmd5::getInstance();
 		$_this->config['disabled'] = false;
 	}
@@ -262,17 +265,18 @@ class Cdnmd5Test extends CakeTestCase {
 	 * Currently only setup on RSC
 	 */
 	public function test_purge() {
+		$purgedFilesInt = Cdnmd5::purge('-1 day');
 		// ensure THIS file exists as a valid hash
 		$this->assertEqual($this->testfile_js_hash, Cdnmd5::makeHash($this->testfile_js));
-		$purgedFilesInt = Cdnmd5::purge('-1 sec');
+		$purgedFilesInt = Cdnmd5::purge('-1 day');
 		$this->assertEqual(0, $purgedFilesInt);
 		// remove THIS file as a valid hash
 		@unlink(Cdnmd5::getConfigFile($this->testfile_js));
-		$purgedFilesInt = Cdnmd5::purge('-1 sec');
+		$purgedFilesInt = Cdnmd5::purge('+1 day');
 		// NOTE: this may not work, if this file was modified and uploaded in
 		// less than 1 sec... (hash/modified timstampes will differ)
 		//   also there are a few hours timezone discrepancies...
-		#$this->assertEqual(1, $purgedFilesInt);
+		$this->assertEqual(1, $purgedFilesInt);
 		// TODO: idea for better test, upload some "trash" files and ensure those are purged
 	}
 
@@ -329,7 +333,12 @@ class Cdnmd5Test extends CakeTestCase {
 		$this->assertEqual($this->testfile_js, Cdnmd5::makeTranslation($this->testfile_js));
 		// translate css files
 		$expect = str_replace('.css', '_translated.css', $this->testfile_css);
-		$this->assertEqual($expect, Cdnmd5::makeTranslation($this->testfile_css));
+		try {
+			$translated = Cdnmd5::makeTranslation($this->testfile_css);
+			$this->fail('No exception, should have an OutOfBoundsException beecause of missing file');
+		} catch (OutOfBoundsException $e) {
+			$this->pass('OutOfBoundsException Found');
+		}
 	}
 }
 

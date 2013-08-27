@@ -216,9 +216,20 @@ Class Cdnmd5Rsc {
 			$content = file_get_contents($sourcefile);
 			debug(compact('sourcefile', 'content', 'target_filename'));
 		}*/
-		$o->Create(array(
+		$params = array(
 			'name' => $target_filename,
-		), $sourcefile);
+		);
+		$parts = explode('.', $sourcefile);
+		$ext = array_pop($parts);
+		if ($ext == 'css') {
+			$params['content_type'] = 'text/css';
+		} elseif ($ext == 'js') {
+			$params['content_type'] = 'text/javascript';
+		}
+		// CORS header (WIP, configurable?)
+		$params['extra_headers']['Access-Control-Allow-Origin'] = '*';
+		// create & upload, send the file
+		$o->Create($params, $sourcefile);
 		return true;
 	}
 

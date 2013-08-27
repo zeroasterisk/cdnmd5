@@ -381,6 +381,7 @@ Class Cdnmd5 {
 	public static function makeHash($filepath) {
 		$filepath = Cdnmd5::getFullPath($filepath);
 		if (!is_file($filepath)) {
+			//debug(compact('init', 'filepath'));
 			throw new OutOfBoundsException('Cdnmd5::makeHash - not a valid file');
 		}
 		$_this = Cdnmd5::getInstance();
@@ -541,7 +542,19 @@ Class Cdnmd5 {
 			throw new OutOfBoundsException('Cdnmd5::transfer - unable to setup cdn filename');
 		}
 		// do we need to translate the file to an alternate filepath?
+		$filepathInit = $filepath;
 		$filepath = $_this->makeTranslation($filepath);
+		if ($filepath != $filepathInit) {
+			// we changed the file path, but we need to the the new hash into
+			// the old one...
+			$_this->makeHash($filepath);
+			// get the two config files, copy the new onto the old
+			$configFileInit = Cdnmd5::getConfigFile($filepathInit);
+			$configFileNew = Cdnmd5::getConfigFile($filepath);
+			copy($configFileNew, $configFileInit);
+			// need a new cdnfilename based on the new hash
+			$cdnfilename = $_this->getCdnfilename($filepathInit);
+		}
 		// transfer the file
 		if ($_this->config['CDN']['type'] == 'RSC') {
 			require_once(dirname(__file__) . '/cdnmd5_rsc.php');
@@ -631,13 +644,14 @@ Class Cdnmd5 {
 				// unable to transfer file (report?)
 				continue;
 			}
-			$newUrl = $_this->url($full, false);
+			//$newUrl = $_this->url($full, false);
+			$newUrl = $_this->url($full);
 			if (empty($newUrl)) {
 				// unable to find url of file...
 				continue;
 			}
 			// replace old-->newUrl in content
-			$newUrl = '/' . $newUrl;
+			//$newUrl = '/' . $newUrl;
 			if ($newUrl != $url) {
 				$content = str_replace($url, $newUrl, $content);
 			}
@@ -669,6 +683,25 @@ Class Cdnmd5 {
 			return array();
 		}
 		$urls = $matches['image'];
+		// clean out all URLs which are not valid URLs (ending in image ext)
+		$exts = array('gif', 'png', 'jpg', 'jpeg');
+		foreach (array_keys($urls) as $i) {
+			// prep "bad" URLs
+			$url = trim(trim(trim($urls[$i]), '"\''));
+			$url = str_replace('#', '?', $url);
+			if (strpos($url, '?')!==false) {
+				// remove the "?" and everything after
+				$parts = explode('?', $url);
+				$url = array_shift($parts);
+			}
+			// get the ext
+			$parts = explode('.', $url);
+			$ext = array_pop($parts);
+			if (count($parts) < 1 || !in_array($ext, $exts)) {
+				unset($urls[$i]);
+			}
+		}
+		// return just the urls, simplified
 		return array_values(array_unique($urls));
 	}
 
