@@ -16,13 +16,13 @@ class Cdnmd5Test extends CakeTestCase {
 	/**
 	 * setup tests
 	 */
-	public function startTest() {
+	public function setUp() {
 	}
 
 	/**
 	 * tear down test
 	 */
-	public function endTest() {
+	public function tearDown() {
 	}
 
 	// TODO: build out tests specific to RSC adaptor
