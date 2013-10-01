@@ -53,15 +53,18 @@
  *
  * After you create your CDNable assets (AssetCompress, Closure, Uglify, CssMin, etc)
  *
- * App::Import('Lib', 'Cdnmd5.Cdnmd5');
+ * App::uses('Cdnmd5', 'Cdnmd5.Lib');
  * Cdnmd5::process(APP . $fullPathToFile);
  *
  * And how to render it in your Views
  *
- * App::Import('Lib', 'Cdnmd5.Cdnmd5');
+ * App::uses('Cdnmd5', 'Cdnmd5.Lib');
  * Cdnmd5::url($webrootRelativePathTofile);
  *
  */
+
+App::uses('Folder', 'Utility');
+App::uses('File', 'Utility');
 Class Cdnmd5 {
 	/**
 	 * This default config can be overwritten by app/config/cdnmd5.php
@@ -194,7 +197,7 @@ Class Cdnmd5 {
 	 * @param string $filepath (FULL path or webroot relative path)
 	 * @return string $filepath (FULL path)
 	 */
-	public function getFullPath($filepath) {
+	public static function getFullPath($filepath) {
 		if (is_file($filepath) && file_exists($filepath)) {
 			return $filepath;
 		}
@@ -224,7 +227,7 @@ Class Cdnmd5 {
 	 * @param string $path
 	 * @return string $path
 	 */
-	public function resolvePath($path) {
+	public static function resolvePath($path) {
 		$path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
 		$parts = array_filter(explode(DIRECTORY_SEPARATOR, $path), 'strlen');
 		$absolutes = array();
@@ -281,7 +284,7 @@ Class Cdnmd5 {
 	 * @param string $filepath or $filename
 	 * @return string $filename (cleaned)
 	 */
-	public function cleanFilename($filepath) {
+	public static function cleanFilename($filepath) {
 		$filename = basename($filepath);
 		// remove any possible query string: filename.ext?soemthing=1
 		$filenameparts = explode('?', $filename);
@@ -353,7 +356,7 @@ Class Cdnmd5 {
 	 * @param string $filename
 	 * @return array compact('ext', 'filenamebase')
 	 */
-	public function splitFilename($filename) {
+	public static function splitFilename($filename) {
 		$filenameparts = explode('.', $filename);
 		$ext = array_pop($filenameparts);
 		$filenamebase = implode('.', $filenameparts);
@@ -557,7 +560,7 @@ Class Cdnmd5 {
 		}
 		// transfer the file
 		if ($_this->config['CDN']['type'] == 'RSC') {
-			require_once(dirname(__file__) . '/cdnmd5_rsc.php');
+			require_once(dirname(__file__) . '/Cdnmd5Rsc.php');
 			return Cdnmd5Rsc::transfer($filepath, $cdnfilename, $_this->config);
 		}
 		if ($_this->config['CDN']['type'] == 'S3') {
@@ -598,7 +601,7 @@ Class Cdnmd5 {
 			$md5hashes[] = file_get_contents($ConfigDir->path . $filename);
 		}
 		if ($_this->config['CDN']['type'] == 'RSC') {
-			require_once(dirname(__file__) . '/cdnmd5_rsc.php');
+			require_once(dirname(__file__) . '/Cdnmd5Rsc.php');
 			return Cdnmd5Rsc::purge($olderThan, $md5hashes, $_this->config);
 		}
 		if ($_this->config['CDN']['type'] == 'S3') {
