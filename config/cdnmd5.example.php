@@ -22,7 +22,7 @@ $config = array(
 		// config for the config files/dirs
 		'Config' => array(
 			// path to the config directory where you want to store the md5 hashes
-			'path' => /* APP */ 'config/cdnmd5/',
+			'path' => /* APP */ 'Config/cdnmd5/',
 		),
 		// configuration for the CDN
 		'CDN' => array(
