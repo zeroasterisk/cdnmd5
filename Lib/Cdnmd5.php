@@ -393,7 +393,7 @@ Class Cdnmd5 {
 		// store to path_md5config / ${filename}.md5
 		$config_file = $_this->getConfigFile($filepath);
 		if (!is_dir(dirname($config_file))) {
-			if (mkdir(dirname($config_file))) {
+			if (mkdir(dirname($config_file), 0777, true)) {
 				debug(compact('config_file'));
 				throw new OutOfBoundsException('Cdnmd5::makeHash - unable to make directory for "path_config"');
 			}
@@ -404,7 +404,6 @@ Class Cdnmd5 {
 		}
 		return $md5hash;
 	}
-
 
 	/**
 	 * Lookup the md5hash for a filename from the config file
