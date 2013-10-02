@@ -269,7 +269,7 @@ Class Cdnmd5Rsc {
 	 * @param array $config
 	 * @return int $numberOfDeletedFiles
 	 */
-	public function purge($olderThan = '-3 months', $excludeHashes = array(), $config = array()) {
+	public static function purge($olderThan = '-3 months', $excludeHashes = array(), $config = array()) {
 		$_this = Cdnmd5Rsc::getInstance($config);
 		$container = $_this->container();
 		$list = $container->ObjectList();
