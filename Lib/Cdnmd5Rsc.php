@@ -98,7 +98,9 @@ Class Cdnmd5Rsc {
 		$_this = Cdnmd5Rsc::getInstance();
 		// load the vendor lib
 		$vendor = $this->config['vendor'];
-		require_once(__DIR__ . DS . $vendor);
+		if (!class_exists('ClassLoader') || !class_exists('OpenCloud')) {
+			require_once(__DIR__ . DS . $vendor);
+		}
 		// initialize API
 		$auth = array_merge(array(
 			'authurl' => RACKSPACE_US,
