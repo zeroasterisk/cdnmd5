@@ -72,7 +72,8 @@ class Cdnmd5Test extends CakeTestCase {
 	/**
 	 * setup tests
 	 */
-	public function startTest() {
+	public function startTest($method) {
+		parent::startTest($method);
 		$_this = Cdnmd5::getInstance();
 		$this->Config_path = $_this->config['Config']['path'];
 		$this->setupTestFiles();
@@ -81,7 +82,8 @@ class Cdnmd5Test extends CakeTestCase {
 	/**
 	 * tear down test
 	 */
-	public function endTest() {
+	public function endTest($method) {
+		parent::endTest($method);
 		@unlink($this->testfile_js);
 		@unlink($this->testfile_css);
 		@unlink($this->testfile_img);
