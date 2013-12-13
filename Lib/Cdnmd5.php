@@ -515,7 +515,14 @@ Class Cdnmd5 {
 		if (empty($filepath)) {
 			return false;
 		}
-		$_this->makeHash($filepath);
+
+		try {
+			$_this->makeHash($filepath);
+		} catch (OutOfBoundsException $e) {
+			echo 'Caught exception: ', $filepath, ' -- ',  $e->getMessage(), "\n";
+			return;
+		}
+
 		return $_this->transfer($filepath);
 	}
 
