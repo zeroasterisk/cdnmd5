@@ -519,7 +519,7 @@ Class Cdnmd5 {
 		try {
 			$_this->makeHash($filepath);
 		} catch (OutOfBoundsException $e) {
-			echo 'Caught exception: ', $filepath, ' -- ',  $e->getMessage(), "\n";
+			//echo 'Caught exception: ', $filepath, ' -- ',  $e->getMessage(), "\n";
 			return;
 		}
 
