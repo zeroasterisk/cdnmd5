@@ -248,9 +248,9 @@ Class Cdnmd5Rsc {
 		return array(
 			'name' => $o->name,
 			'size' => $o->bytes,
-			'type' => $o->type,
-			'cdnurl' => $object->CDNUrl(),
-			'publicurl' => $object->PublicURL(),
+			'type' => empty($o->type) ? null:  $o->type,
+			'cdnurl' =>  $o->CDNUrl(),
+			'publicurl' =>  $o->PublicURL(),
 			'hash' => $o->hash,
 			'last_modified' => $o->last_modified,
 			'content_type' => $o->content_type,
@@ -291,6 +291,72 @@ Class Cdnmd5Rsc {
 		}
 		return count($files);
 	}
+
+    /**
+     * Method used to delete a file from CDN based on filepath
+     *
+     * @param null $filepath
+     * @param array $config
+     * @return bool
+     */
+    public static function delete($filepath = null, $config = array()) {
+
+        $_this = Cdnmd5Rsc::getInstance($config);
+        $container = $_this->container();
+        $fileObject = self::getFileObject($container, $filepath);
+
+        if (empty($fileObject)) {
+            return false;
+        }
+
+        if ($fileObject->Delete()) {
+            return true;
+        }
+
+        return false;
+    }
+
+
+    /**
+     * Method used to return details on for a file using a public CDN filepath
+     *
+     * @param null $filepath
+     * @param array $config
+     * @return false|mixed
+     */
+    public static function details($filepath = null, $config = array()) {
+
+        $_this = Cdnmd5Rsc::getInstance($config);
+        $container = $_this->container();
+        $fileObject = self::getFileObject($container, $filepath);
+
+        if (empty($fileObject)) {
+            return false;
+        }
+
+        return $fileObject;
+    }
+
+    /**
+     * Method used to retrieve file data from CDN as object based on filename
+     *
+     * @param $container
+     * @param $filename
+     * @return mixed|null
+     */
+    private function getFileObject($container, $filename) {
+
+        try {
+
+            return $container->DataObject($filename);
+
+        } catch (\Exception $e) {
+
+            return null;
+
+        }
+
+    }
 
 }
 

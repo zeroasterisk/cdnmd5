@@ -727,5 +727,52 @@ Class Cdnmd5 {
 		// relative url, relative to this CSS file (in $basedir)
 		return $basedir . '/' . $url;
 	}
+
+    /**
+     * Method used to delete a CDN file via the public file path
+     *
+     * @param null $cdnPublicFilepath
+     * @param array $config
+     * @return bool
+     */
+    public static function delete($cdnPublicFilepath = null, $config = array()) {
+
+        $filepath = ltrim(preg_replace('/(.*)\.com/', '', $cdnPublicFilepath), '/');
+
+        $_this = Cdnmd5::getInstance($config);
+
+        if ($_this->config['CDN']['type'] == 'RSC') {
+            require_once(dirname(__file__) . '/Cdnmd5Rsc.php');
+            return Cdnmd5Rsc::delete($filepath, $_this->config);
+        }
+        if ($_this->config['CDN']['type'] == 'S3') {
+            throw new OutOfBoundsException('Cdnmd5::delete - sorry, we have not built S3 support yet :(');
+        }
+        throw new OutOfBoundsException('Cdnmd5::delete - unknown CDN type');
+    }
+
+    /**
+     * Method used to retrieve CDN file details via the public file path
+     *
+     * @param null $cdnPublicFilepath
+     * @param array $config
+     * @return false|mixed
+     */
+    public static function fileDetails($cdnPublicFilepath = null, $config = array()) {
+
+        $filepath = ltrim(preg_replace('/(.*)\.com/', '', $cdnPublicFilepath), '/');
+
+        $_this = Cdnmd5::getInstance($config);
+
+        if ($_this->config['CDN']['type'] == 'RSC') {
+            require_once(dirname(__file__) . '/Cdnmd5Rsc.php');
+            return Cdnmd5Rsc::details($filepath, $_this->config);
+        }
+        if ($_this->config['CDN']['type'] == 'S3') {
+            throw new OutOfBoundsException('Cdnmd5::fileDetails - sorry, we have not built S3 support yet :(');
+        }
+        throw new OutOfBoundsException('Cdnmd5::fileDetails - unknown CDN type');
+    }
+
 }
 
